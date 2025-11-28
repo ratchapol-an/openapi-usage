@@ -109,7 +109,7 @@ jobs:
         gh release upload ${{ needs.release-please.outputs.tag_name }} \
           generated/OrderingApiClient/nupkg/*.nupkg
 
-    - name: Create Pre-release for PR
+    - name: Create Pre-release for Pull Request
       if: github.event_name == 'pull_request'
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
