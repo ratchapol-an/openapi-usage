@@ -57,3 +57,4 @@ CodeCoverage/
 TestResult.xml
 nunit-*.xml
 src/Example/.claude/settings.local.json
+src/Example/Example.sln.DotSettings.user
