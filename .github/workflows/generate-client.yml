@@ -1,0 +1,135 @@
+name: Release and Publish C# Client
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      should_publish_nuget:
+        description: 'Publish to NuGet'
+        type: boolean
+        default: true
+
+env:
+  PACKAGE_NAME: OrderingApiClient
+  # Set to 'true' to enable NuGet publishing, 'false' to disable
+  SHOULD_PUBLISH_NUGET: ${{ github.event.inputs.should_publish_nuget || vars.SHOULD_PUBLISH_NUGET || 'true' }}
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
+
+    steps:
+    - uses: googleapis/release-please-action@v4
+      id: release
+      with:
+        release-type: simple
+
+  build-and-publish:
+    runs-on: ubuntu-latest
+    needs: [release-please]
+    if: always() && (needs.release-please.outputs.release_created == 'true' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
+
+    - name: Get latest release version
+      id: latest
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        VERSION=$(gh release view --json tagName -q '.tagName' 2>/dev/null | sed 's/^v//' || echo "1.0.0")
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Latest release: $VERSION"
+
+    - name: Determine version
+      id: version
+      run: |
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          # For PRs, use latest version + beta suffix
+          BASE_VERSION="${{ steps.latest.outputs.version }}"
+          VERSION="${BASE_VERSION}-beta.pr${{ github.event.pull_request.number }}"
+        elif [[ "${{ needs.release-please.outputs.version }}" != "" ]]; then
+          # Use version from release-please
+          VERSION="${{ needs.release-please.outputs.version }}"
+        else
+          # Manual dispatch without release
+          BASE_VERSION="${{ steps.latest.outputs.version }}"
+          VERSION="${BASE_VERSION}-manual.$(date +%Y%m%d%H%M%S)"
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+
+    - uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Build API
+      run: dotnet build src/Example/Ordering.Api/Ordering.Api.csproj -c Release
+
+    - name: Generate C# Client
+      uses: openapi-generators/openapitools-generator-action@v1
+      with:
+        generator: csharp
+        openapi-file: src/Example/Ordering.Api/obj/Ordering.Api.json
+        command-args: >
+          -o generated/OrderingApiClient
+          --additional-properties=targetFramework=net10.0,library=generichost,packageName=${{ env.PACKAGE_NAME }},packageVersion=${{ steps.version.outputs.version }},netCoreProjectFile=true,nullableReferenceTypes=true
+
+    - name: Build and Pack
+      run: |
+        cd generated/OrderingApiClient
+        dotnet build -c Release
+        dotnet pack -c Release --no-build -o ./nupkg
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: nuget-package
+        path: generated/OrderingApiClient/nupkg/*.nupkg
+
+    - name: Attach NuGet to Release
+      if: needs.release-please.outputs.release_created == 'true'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh release upload ${{ needs.release-please.outputs.tag_name }} \
+          generated/OrderingApiClient/nupkg/*.nupkg
+
+    - name: Create Pre-release for PR
+      if: github.event_name == 'pull_request'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        TAG="v${{ steps.version.outputs.version }}"
+        # Delete existing pre-release if exists
+        gh release delete "$TAG" --yes 2>/dev/null || true
+        git tag -d "$TAG" 2>/dev/null || true
+        git push origin ":refs/tags/$TAG" 2>/dev/null || true
+        
+        gh release create "$TAG" \
+          --title "$TAG" \
+          --notes "Pre-release for PR #${{ github.event.pull_request.number }}" \
+          --prerelease \
+          generated/OrderingApiClient/nupkg/*.nupkg
+
+    - name: Publish to NuGet
+      if: env.SHOULD_PUBLISH_NUGET == 'true'
+      run: |
+        dotnet nuget push generated/OrderingApiClient/nupkg/*.nupkg \
+          --api-key ${{ secrets.NUGET_API_KEY }} \
+          --source https://api.nuget.org/v3/index.json \
+          --skip-duplicate
