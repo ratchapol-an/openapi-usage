@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/ratchapol-an/openapi-usage/compare/v1.0.1...v1.1.0) (2025-11-28)
+
+
+### Features
+
+* add example responses ([14e77cc](https://github.com/ratchapol-an/openapi-usage/commit/14e77cc60e921a75463583c286638ab49613d0dc))
+
 ## [1.0.1](https://github.com/ratchapol-an/openapi-usage/compare/v1.0.0...v1.0.1) (2025-11-28)
 
 
