@@ -53,15 +53,16 @@ public static class CreateOrder
 
                 var totalAmount = items.Sum(i => i.Quantity * i.UnitPrice);
 
-                var newOrder = new Order(
-                    Id: OrderStorage.Orders.Count > 0 ? OrderStorage.Orders.Max(o => o.Id) + 1 : 1,
-                    CustomerName: request.CustomerName,
-                    CustomerEmail: request.CustomerEmail,
-                    OrderDate: DateTime.UtcNow,
-                    Status: OrderStatus.Pending,
-                    Items: items,
-                    TotalAmount: totalAmount
-                );
+                var newOrder = new Order
+                {
+                    Id = OrderStorage.Orders.Count > 0 ? OrderStorage.Orders.Max(o => o.Id) + 1 : 1,
+                    CustomerName = request.CustomerName,
+                    CustomerEmail = request.CustomerEmail,
+                    OrderDate = DateTime.UtcNow,
+                    Status = OrderStatus.Pending,
+                    Items = items,
+                    TotalAmount = totalAmount
+                };
 
                 OrderStorage.Orders.Add(newOrder);
                 return TypedResults.Created($"/orders/{newOrder.Id}", newOrder);

@@ -45,66 +45,83 @@ public class OrderItem
     public required decimal UnitPrice { get; init; }
 }
 
-public record Order(
-    [property: Description("Unique order identifier")]
-    int Id,
+public class Order
+{
+    /// <summary>
+    /// Unique order identifier
+    /// </summary>
+    public int Id { get; init; }
 
-    [property: Description("Full name of the customer")]
-    [property: Required]
-    [property: StringLength(100, MinimumLength = 2)]
-    string CustomerName,
+    /// <summary>
+    /// Full name of the customer
+    /// </summary>
+    [Required]
+    [StringLength(100, MinimumLength = 2)]
+    public required string CustomerName { get; init; }
 
-    [property: Description("Customer's email address")]
-    [property: Required]
-    [property: EmailAddress]
-    string CustomerEmail,
+    /// <summary>
+    /// Customer's email address
+    /// </summary>
+    [Required]
+    [EmailAddress]
+    public required string CustomerEmail { get; init; }
 
-    [property: Description("Date and time when the order was created")]
-    DateTime OrderDate,
+    /// <summary>
+    /// Date and time when the order was created
+    /// </summary>
+    public DateTime OrderDate { get; init; }
 
-    [property: Description("Current status of the order")]
-    OrderStatus Status,
+    /// <summary>
+    /// Current status of the order
+    /// </summary>
+    public OrderStatus Status { get; init; }
 
-    [property: Description("List of items in the order")]
-    [property: Required]
-    [property: MinLength(1)]
-    List<OrderItem> Items,
+    /// <summary>
+    /// List of items in the order
+    /// </summary>
+    [Required]
+    [MinLength(1)]
+    public required List<OrderItem> Items { get; init; }
 
-    [property: Description("Total order amount in USD")]
-    [property: Required]
-    [property: Range(0.01, 999999.99)]
-    decimal TotalAmount
-);
+    /// <summary>
+    /// Total order amount in USD
+    /// </summary>
+    [Required]
+    [Range(0.01, 999999.99)]
+    public decimal TotalAmount { get; init; }
+}
 
 public static class OrderStorage
 {
     public static List<Order> Orders { get; } = new()
     {
-        new Order(
-            Id: 1,
-            CustomerName: "John Doe",
-            CustomerEmail: "john.doe@example.com",
-            OrderDate: DateTime.UtcNow.AddDays(-2),
-            Status: OrderStatus.Processing,
-            Items: new List<OrderItem>
+        new Order
+        {
+            Id = 1,
+            CustomerName = "John Doe",
+            CustomerEmail = "john.doe@example.com",
+            OrderDate = DateTime.UtcNow.AddDays(-2),
+            Status = OrderStatus.Processing,
+            Items = new List<OrderItem>
             {
                 new() { ProductName = "Laptop", Quantity = 1, UnitPrice = 999.99m },
                 new() { ProductName = "Mouse", Quantity = 2, UnitPrice = 25.00m }
             },
-            TotalAmount: 1049.99m
-        ),
-        new Order(
-            Id: 2,
-            CustomerName: "Jane Smith",
-            CustomerEmail: "jane.smith@example.com",
-            OrderDate: DateTime.UtcNow.AddDays(-1),
-            Status: OrderStatus.Shipped,
-            Items: new List<OrderItem>
+            TotalAmount = 1049.99m
+        },
+        new Order
+        {
+            Id = 2,
+            CustomerName = "Jane Smith",
+            CustomerEmail = "jane.smith@example.com",
+            OrderDate = DateTime.UtcNow.AddDays(-1),
+            Status = OrderStatus.Shipped,
+            Items = new List<OrderItem>
             {
                 new() { ProductName = "Wireless Keyboard", Quantity = 1, UnitPrice = 79.99m },
                 new() { ProductName = "USB-C Cable", Quantity = 3, UnitPrice = 12.99m }
             },
-            TotalAmount: 118.96m
-        )
+            TotalAmount = 118.96m
+        }
     };
 }

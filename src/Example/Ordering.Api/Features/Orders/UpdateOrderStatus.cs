@@ -19,7 +19,16 @@ public static class UpdateOrderStatus
                 var order = OrderStorage.Orders.FirstOrDefault(o => o.Id == id);
                 if (order is null) return TypedResults.NotFound();
 
-                var updatedOrder = order with { Status = request.Status };
+                var updatedOrder = new Order
+                {
+                    Id = order.Id,
+                    CustomerName = order.CustomerName,
+                    CustomerEmail = order.CustomerEmail,
+                    OrderDate = order.OrderDate,
+                    Status = request.Status,
+                    Items = order.Items,
+                    TotalAmount = order.TotalAmount
+                };
 
                 var index = OrderStorage.Orders.IndexOf(order);
                 OrderStorage.Orders[index] = updatedOrder;
